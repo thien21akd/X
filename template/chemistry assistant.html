@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trợ lý hóa học</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        #chat-container {
+            width: 400px;
+            max-width: 100%;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 10px;
+            border-radius: 10px;
+            border: 1px solid #b2dfdb;
+            background-color: #f0f4f4;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .message.user {
+            background-color: #a5d6a7;
+            margin-left: auto;
+            text-align: right;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .message.bot {
+            background-color: #81d4fa;
+            margin-right: auto;
+            text-align: left;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #input-container {
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #b2dfdb;
+            padding-top: 10px;
+        }
+        #input-container input {
+            flex: 1;
+            padding: 14px;
+            border: 1px solid #b2dfdb;
+            border-radius: 25px;
+            font-size: 16px;
+            margin-right: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        #input-container input:focus {
+            border-color: #004d40;
+        }
+        #input-container button {
+            padding: 14px 20px;
+            border: none;
+            background-color: #004d40;
+            color: #ffffff;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        #input-container button:hover {
+            background-color: #00796b;
+        }
+        #input-container button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="messages"></div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const qaPairs = [
+            { 
+                question: 'Xin chào', 
+                answer: 'Xin chào! Tôi là chatbot hóa học. Tôi có thể giúp gì cho bạn hôm nay?' 
+            },
+            { 
+                question: 'hello', 
+                answer: 'Xin chào! Tôi là chatbot hóa học. Tôi có thể giúp gì cho bạn hôm nay?' 
+            },
+            { 
+                question: 'Hello', 
+                answer: 'Xin chào! Tôi là chatbot hóa học. Tôi có thể giúp gì cho bạn hôm nay?' 
+            },
+            { 
+                question: 'HELLO', 
+                answer: 'Xin chào! Tôi là chatbot hóa học. Tôi có thể giúp gì cho bạn hôm nay?' 
+            },
+            { 
+                question: 'Hi', 
+                answer: 'Xin chào! Tôi là chatbot hóa học. Tôi có thể giúp gì cho bạn hôm nay?' 
+            },
+            { 
+                question: 'hi', 
+                answer: 'Xin chào! Tôi là chatbot hóa học. Tôi có thể giúp gì cho bạn hôm nay?' 
+            },
+            { 
+                question: 'HI', 
+                answer: 'Xin chào! Tôi là chatbot hóa học. Tôi có thể giúp gì cho bạn hôm nay?' 
+            },
+            { 
+                question: 'Bạn tên gì?', 
+                answer: 'Tôi là một trợ lý ảo trong lĩnh vực hóa học.' 
+            },
+            { 
+                question: 'Tạm biệt', 
+                answer: 'Tạm biệt! Hãy quay lại nếu bạn cần thêm thông tin.' 
+            },
+            { 
+                question: 'Thời tiết hôm nay', 
+                answer: 'Tôi không có thông tin thời tiết, nhưng tôi có thể giúp bạn với các vấn đề hóa học!' 
+            },
+            { 
+                question: 'Bạn biết nói tiếng Anh không?', 
+                answer: 'Có, tôi có thể giao tiếp bằng cả tiếng Anh và tiếng Việt.' 
+            },
+            { 
+                question: 'Cám ơn', 
+                answer: 'Rất vui được giúp đỡ!' 
+            },
+            { 
+                question: 'pH của nước tinh khiết', 
+                answer: 'Nước tinh khiết có pH xấp xỉ 7.' 
+            },
+            { 
+                question: 'HCl là gì?', 
+                answer: 'HCl là axit clohidric, một axit mạnh được sử dụng rộng rãi trong phòng thí nghiệm và công nghiệp.' 
+            },
+            { 
+                question: 'Tính chất của NaCl', 
+                answer: 'NaCl, hay còn gọi là muối ăn, là một hợp chất ion của natri và clo. Nó tan trong nước và có nhiều ứng dụng trong thực phẩm và công nghiệp.' 
+            }
+        ];
+        
+        document.getElementById('send-button').addEventListener('click', () => {
+            const userInput = document.getElementById('user-input').value.trim();
+            if (userInput === '') return;
+
+            const messages = document.getElementById('messages');
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.classList.add('message', 'user');
+            userMessageDiv.textContent = userInput;
+            messages.appendChild(userMessageDiv);
+
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.classList.add('message', 'bot');
+            botMessageDiv.textContent = getBotResponse(userInput);
+            messages.appendChild(botMessageDiv);
+
+            messages.scrollTop = messages.scrollHeight;
+            document.getElementById('user-input').value = '';
+        });
+
+        function getBotResponse(userInput) {
+            userInput = userInput.toLowerCase();
+
+            for (let i = 0; i < qaPairs.length; i++) {
+                const question = qaPairs[i].question.toLowerCase();
+                if (userInput.includes(question)) {
+                    return qaPairs[i].answer;
+                }
+            }
+
+            return 'Xin lỗi, tôi không hiểu câu hỏi của bạn. Vui lòng thử lại hoặc hỏi về hóa học!';
+        }
+    </script>
+</body>
+</html>

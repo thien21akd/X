@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChemSpec Vision</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+    
+        /* Reset styles */
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #e0f7fa; /* Light blue background */
+            color: #333; /* Dark gray text color */
+            line-height: 1.6; /* Improved readability */
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Header styles */
+        header {
+            background: linear-gradient(to right, #0073e6, #005bb5); /* Gradient background */
+            color: white; /* White text for contrast */
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            flex-wrap: wrap;
+            position: relative; /* Positioning for pseudo-element */
+        }
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #e0f7fa; /* Match body background */
+            z-index: -1; /* Behind header content */
+        }
+        header h1 {
+            font-size: 2.3em; /* Larger heading */
+            margin: 0;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); /* Text shadow for emphasis */
+        }
+        header .nav {
+            display: flex;
+            gap: 20px;
+        }
+        .nav a {
+            color: white;
+            font-size: 1.7em;
+            text-decoration: none;
+            transition: color 0.3s;
+            font-weight: 600; /* Slightly bolder font */
+        }
+        .nav a:hover {
+            color: #b2dfdb; /* Light green on hover */
+        }
+    
+        /* Main content container */
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff; /* White background */
+            border-radius: 20px; /* Rounded corners for a softer look */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); /* Enhanced shadow */
+            position: relative; /* Positioning for pseudo-element */
+            z-index: 1; /* Ensure content is above header background */
+        }
+    
+        /* Video and canvas styles */
+        #video, #canvas {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #004d40; /* Dark teal border */
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: #000; /* Black background */
+        }
+    
+        /* Output section styles */
+        .output {
+            background-color: #f0f0f0; /* Light gray background */
+            padding: 20px;
+            border-radius: 15px; /* Slightly rounded corners */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Deeper shadow */
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* Increased gap between elements */
+        }
+        .output label {
+            font-size: 1.3em; /* Slightly larger label */
+            margin-bottom: 8px; /* Smaller margin bottom */
+            color: #004d40; /* Dark teal text color */
+        }
+        .output input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em; /* Slightly larger input font size */
+            border: 2px solid #ccc; /* Lighter border */
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        .output p {
+            margin: 12px 0; /* Smaller margin for paragraphs */
+            font-size: 1.3em; /* Larger paragraph font size */
+            font-weight: 500; /* Medium font weight */
+        }
+    
+        /* Analysis history styles */
+        #analysisHistory {
+            background-color: #f0f0f0; /* Light gray background */
+            padding: 20px;
+            border-radius: 15px; /* Slightly rounded corners */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Deeper shadow */
+            margin-bottom: 20px;
+        }
+        #analysisHistory h2 {
+            font-size: 2em; /* Larger heading */
+            margin-bottom: 15px; /* Larger margin bottom */
+            color: #004d40; /* Dark teal text color */
+        }
+        .analysis-entry {
+            background-color: #e0e0e0; /* Light gray entry background */
+            padding: 18px; /* Increased padding */
+            margin-bottom: 18px; /* Smaller margin bottom */
+            border-radius: 12px; /* Rounded corners */
+            border-left: 6px solid #004d40; /* Dark teal left border */
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .analysis-entry:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3); /* Enhanced box shadow */
+        }
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px; /* Smaller margin bottom */
+        }
+        .entry-time, .entry-pH {
+            font-size: 1em; /* Smaller font size */
+            color: #666; /* Gray text color */
+        }
+        .entry-body {
+            margin-top: 10px; /* Smaller margin top */
+        }
+        .entry-chemical {
+            font-weight: bold;
+            color: #004d40; /* Dark teal text color */
+        }
+    
+        /* Button styles */
+        #resetButton {
+            background-color: #00796b; /* Dark teal button */
+            color: white;
+            border: none;
+            border-radius: 8px; /* Rounded button */
+            padding: 14px 28px; /* Larger padding */
+            font-size: 1.1em; /* Larger font size */
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 25px; /* Larger margin top */
+        }
+        #resetButton:hover {
+            background-color: #004d40; /* Dark teal button on hover */
+        }
+    
+        /* Responsive styling */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            header h1 {
+                font-size: 2.5em; /* Adjusted font size for smaller screens */
+            }
+            .nav {
+                width: 100%;
+                display: flex;
+                justify-content: space-around;
+            }
+        }
+    </style>
+    
+</head>
+<body>
+    <header>
+        <h1>ChemSpec Vision</h1>
+        <nav class="nav">
+            <a href="products.html">Sản phẩm</a>
+            <a href="chemical_substances.html">Chất hóa học</a>
+            <a href = "chemistry assistant.html">Trợ lý hóa học</a>
+        </nav>
+    </header>
+    <div class="container">
+        <video id="video" width="640" height="480" autoplay></video>
+        <canvas id="canvas" width="640" height="480"></canvas>
+
+        <div class="output">
+            <label for="phInput">Độ pH:</label>
+            <input type="number" id="phInput" min="0" max="14" step="0.01" value="7.00">
+            <label for="KInput">Độ K:</label>
+            <input type="number" id="KInput" min="0" step="0.5" value="0">
+            <p>Chất hóa học phát hiện: <span id="detectedObject">Chưa xác định</span></p>
+        </div>
+
+        <div id="analysisHistory">
+            <h2>Lịch sử Đo Phân Tích</h2>
+            <div id="historyList"></div>
+        </div>
+
+        <button id="resetButton">Reset</button>
+    </div>
+    <script>
+        const phInputElement = document.getElementById('phInput');
+        const kInputElement = document.getElementById('KInput');
+        const detectedObjectElement = document.getElementById('detectedObject');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        let csvData = [];
+
+        function readPHValue() {
+            const pHInput = parseFloat(phInputElement.value);
+            if (isNaN(pHInput) || pHInput < 0 || pHInput > 14) {
+                return "Chưa xác định";
+            }
+            return pHInput.toFixed(2);
+        }
+
+        function readKValue() {
+            const kInput = parseFloat(kInputElement.value);
+            if (isNaN(kInput) || kInput < 0) {
+                return "Chưa xác định";
+            }
+            return kInput.toFixed(2);
+        }
+
+        function saveAnalysisToLocalStorage(pHValue, detectedChemical) {
+            const analysis = {
+                timestamp: new Date().toLocaleString(),
+                pHValue: pHValue,
+                detectedChemical: detectedChemical
+            };
+            let analyses = JSON.parse(localStorage.getItem('analyses')) || [];
+            analyses.push(analysis);
+            if (analyses.length > 5) {
+                analyses.shift();
+            }
+            localStorage.setItem('analyses', JSON.stringify(analyses));
+            displayAnalysisHistory();
+        }
+
+        function displayAnalysisHistory() {
+            let analyses = JSON.parse(localStorage.getItem('analyses')) || [];
+            const recentAnalyses = analyses.slice(-5);
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            recentAnalyses.forEach((analysis) => {
+                const div = document.createElement('div');
+                div.classList.add('analysis-entry');
+                div.innerHTML = `
+                    <div class="entry-header">
+                        <span class="entry-time">${analysis.timestamp}</span>
+                        <span class="entry-pH">pH: ${analysis.pHValue}</span>
+                    </div>
+                    <div class="entry-body">
+                        <span class="entry-chemical">Chất hóa học phát hiện: ${analysis.detectedChemical}</span>
+                    </div>
+                `;
+                historyList.appendChild(div);
+            });
+        }
+
+        window.addEventListener('load', displayAnalysisHistory);
+
+        function processChemicalDetection(pHValue) {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const { r, g, b } = getBGR(canvas.width / 2, canvas.height / 2);
+            const detectedChemical = checkForChemicalSubstances(r, g, b, pHValue);
+            saveAnalysisToLocalStorage(pHValue, detectedChemical);
+
+            switch (detectedChemical) {
+                case "Cl2":
+                    detectedObjectElement.innerText = "Cl2 (Clo)";
+                    break;
+                case "CuSO4":
+                    if (pHValue >= 6.8 && pHValue <= 7.2 && readKValue() == 423) {
+                        detectedObjectElement.innerText = "CuSO4 (Đồng sulfat an toàn)";
+                        if (confirm("Bạn có muốn tìm hiểu về chất này không?")) {
+                            window.location.href = 'ungdungCuSO4.html';
+                        }
+                    } else {
+                        detectedObjectElement.innerText = "CuSO4 (Đồng sulfat có độc)";
+                    }
+                    break;
+                case "KMnO4":
+                    if (pHValue >= 8) {
+                        detectedObjectElement.innerText = "KMnO4 (Kali permanganat)";
+                        if (confirm("Bạn có muốn tìm hiểu về chất này không?")) {
+                            window.location.href = 'ungdungKMnO4.html';
+                        }
+                    }
+                    break;
+                case "FeCl2":
+                    if (pHValue <= 6) {
+                        detectedObjectElement.innerText = "FeCl2 (Sắt(II) clorua)";
+                        if (confirm("Bạn có muốn tìm hiểu về chất này không?")) {
+                            window.location.href = 'ungdungFeCl2.html';
+                        }
+                    }
+                    break;
+                case "H2O":
+                    detectedObjectElement.innerText = "H2O (Nước)";
+                    break;
+                case "NaOH":
+                    if (pHValue >= 13 && pHValue <= 14) {
+                        detectedObjectElement.innerText = "NaOH";
+                        if (confirm("Bạn có muốn tìm hiểu về chất này không?")) {
+                            window.location.href = 'ungdungNaOH.html';
+                        }
+                    } else {
+                        detectedObjectElement.innerText = "NaOH (nguy hiểm)";
+                    }
+                    break;
+                default:
+                    detectedObjectElement.innerText = "Chưa phát hiện chất hóa học";
+                    break;
+            }
+        }
+
+        function drawSquare(x, y) {
+            context.strokeStyle = 'rgb(0, 255, 255)';
+            context.lineWidth = 2;
+            context.strokeRect(x - 75, y - 75, 150, 150);
+        }
+
+        function getBGR(x, y) {
+            const frame = context.getImageData(x, y, 1, 1).data;
+            return { r: frame[0], g: frame[1], b: frame[2] };
+        }
+
+        function getColorName(r, g, b) {
+            if (r >= 180 && g >= 180 && b < 100) {
+                return "Vàng";
+            } else if (r >= 180 && g < 115 && b < 115) {
+                return "Đỏ";
+            } else if (g >= 200 && r < 200 && b < 200) {
+                return "Xanh lá";
+            } else if (b >= 180 && r < 100 && g >= 100) {
+                return "Xanh dương";
+            } else if (r <= 10 && g <= 10 && b <= 10) {
+                return "Đen";
+            } else if (r >= 160 && g >= 160 && b >= 160) {
+                return "Trắng";
+            } else if (r <= 220 && g <= 100 && b >= 200) {
+                return "Tím";
+            } else if (r >= 220 && g >= 150 && b <= 10) {
+                return "Cam";
+            } else if (r >= 150 && g >= 150 && b >= 150){
+                return "Không màu";
+            }
+    
+            let minimum = Infinity;
+            let name = "Chưa xác định";
+    
+            for (const row of csvData) {
+                const d = Math.sqrt(
+                    Math.pow(r - parseInt(row.R), 2) +
+                    Math.pow(g - parseInt(row.G), 2) +
+                    Math.pow(b - parseInt(row.B), 2)
+                );
+                if (d < minimum) {
+                    minimum = d;
+                    name = row.color_name;
+                }
+            }
+            return name;
+        }
+    
+        function putText(x, y, r, g, b) {
+            const cname = getColorName(r, g, b);
+            const text = `${cname} | R=${r} G=${g} B=${b}`;
+            context.fillStyle = 'white';
+            context.font = "20px Arial";
+            context.fillText(text, x - 75, y - 90);
+        }
+    
+        function checkForChemicalSubstances(r, g, b, pH) {
+    if (pH >= 3 && pH <= 5 && r >= 180 && g >= 180 && b < 100) {
+        return "Cl2";
+    } else if (pH >= 6.8 && pH <= 7.2 && r < 100 && g >= 100 && b >= 180) {
+        return "CuSO4";
+    } else if (pH>=13 && pH<=14&& r >= 150 && g >= 150 && b >= 150) {
+        return "NaOH";
+    }
+            else if (pH >= 8 && r <= 220 && g <= 100 && b >= 200) {
+                return "KMnO4";
+            } else if (pH <= 6 && g >= 200 && r < 200 && b < 200) {
+                return "FeCl2";
+            } else if ((pH >= 6.50 && pH <= 8.50)&& r>=150 && g>= 150 && b >= 150){
+                return "H2O";
+            }
+            else {
+                return "Chưa phát hiện chất hóa học";
+            }
+        }
+    
+        function setupCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                    video.srcObject = stream;
+                    video.play();
+                    video.addEventListener('play', function () {
+                        (function loop() {
+                            if (!video.paused && !video.ended) {
+                                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                                const x = canvas.width / 2;
+                                const y = canvas.height / 2;
+                                const pixelColor = getBGR(x, y);
+                                drawSquare(x, y);
+                                putText(x, y, pixelColor.r, pixelColor.g, pixelColor.b);
+                                setTimeout(loop, 1000 / 30);
+                            }
+                        })();
+                    });
+                })
+                .catch(function (error) {
+                    console.error("Có lỗi xảy ra khi truy cập webcam:", error);
+                });
+        }
+    
+        // Event listener for reset button
+        document.getElementById('resetButton').addEventListener('click', () => {
+            phInputElement.value = "7.00";
+            kInputElement.value = "0";
+            detectedObjectElement.innerText = "Chưa xác định";
+        });
+    
+        window.addEventListener('load', () => {
+            setupCamera();
+            // Tải dữ liệu từ tệp CSV
+            Papa.parse("colors.csv", {
+                download: true,
+                header: true,
+                complete: function (results) {
+                    csvData = results.data;
+                }
+            });
+        });
+    
+        // Event listener for pH input change
+        phInputElement.addEventListener('change', () => {
+            const pHValue = readPHValue();
+            if (pHValue !== "Chưa xác định") {
+                processChemicalDetection(pHValue);
+            } else {
+                alert("Vui lòng nhập giá trị pH hợp lệ (0 đến 14).");
+            }
+        });
+    </script>
+    
+</body>
+</html>

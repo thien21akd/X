@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AICAS - Artificial Intelligence Chemical Analysis System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <style>
+        /* Reset styles */
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Header styles */
+        header {
+            background-color: #004d40;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        /* Main content container */
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Video and canvas styles */
+        #video, #canvas {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #004d40;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: #000;
+        }
+
+        /* Output section styles */
+        .output {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        .output p {
+            margin: 10px 0;
+            font-size: 1.2em;
+            font-weight: 400;
+        }
+
+        /* Analysis history styles */
+        #analysisHistory {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        #analysisHistory h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            color: #004d40;
+        }
+        .analysis-entry {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 5px solid #004d40;
+        }
+        .analysis-entry:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .entry-time, .entry-pH {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .entry-body {
+            margin-top: 5px;
+        }
+        .entry-chemical {
+            font-weight: bold;
+            color: #004d40;
+        }
+
+        /* Button styles */
+        #resetButton {
+            background-color: #00796b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+        }
+        #resetButton:hover {
+            background-color: #004d40;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AICAS - Artificial Intelligence Chemical Analysis System</h1>
+    </header>
+    <div class="container">
+        <video id="video" width="640" height="480" autoplay></video>
+        <canvas id="canvas" width="640" height="480"></canvas>
+        
+        <div class="output">
+            <p>Độ pH: <input type="number" id="phInput" min="0" max="14" step="0.01" value="7.00"></p>
+            <p>Chất hóa học phát hiện: <span id="detectedObject">Chưa xác định</span></p>
+        </div>
+        
+        <div id="analysisHistory">
+            <h2>Lịch sử Đo Phân Tích</h2>
+            <div id="historyList"></div>
+        </div>
+        
+        <button id="resetButton">Reset</button>
+    </div>
+    <script>
+        const phInputElement = document.getElementById('phInput');
+        const detectedObjectElement = document.getElementById('detectedObject');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        let csvData = [];
+    
+        function readPHValue() {
+            const pHInput = parseFloat(phInputElement.value);
+    
+            if (isNaN(pHInput) || pHInput < 0 || pHInput > 14) {
+                return "Chưa xác định";
+            }
+    
+            const pHValue = pHInput.toFixed(2);
+            return pHValue;
+        }
+        function saveAnalysisToLocalStorage(pHValue, detectedChemical) {
+            // Create a new object to store analysis data
+            const analysis = {
+                timestamp: new Date().toLocaleString(),
+                pHValue: pHValue,
+                detectedChemical: detectedChemical
+            };
+        
+            // Retrieve existing analyses from localStorage
+            let analyses = JSON.parse(localStorage.getItem('analyses')) || [];
+        
+            // Add the new analysis to the list
+            analyses.push(analysis);
+        
+            // Check if the number of analyses exceeds 5, remove the oldest entry
+            if (analyses.length > 5) {
+                analyses.shift(); // Remove the first (oldest) element
+            }
+        
+            // Save the updated list back to localStorage
+            localStorage.setItem('analyses', JSON.stringify(analyses));
+        
+            // Update UI or perform other actions as needed
+            displayAnalysisHistory(); // Update the displayed history
+            console.log('Analysis saved to localStorage:', analysis);
+        }
+        
+        // Function to display analysis history
+        // Hàm để hiển thị lịch sử phân tích
+        function displayAnalysisHistory() {
+            // Lấy danh sách các phân tích từ localStorage
+            let analyses = JSON.parse(localStorage.getItem('analyses')) || [];
+        
+            // Giới hạn số lượng phân tích hiển thị tối đa là 5
+            const recentAnalyses = analyses.slice(-5); // Lấy 5 phân tích gần nhất
+        
+            // Lấy thẻ div với id historyList để thêm mục lịch sử
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = ''; // Xóa nội dung hiện có
+        
+            // Duyệt qua danh sách phân tích và thêm từng mục vào danh sách
+            recentAnalyses.forEach((analysis, index) => {
+                const div = document.createElement('div');
+                div.classList.add('analysis-entry');
+        
+                // Tạo nội dung cho mỗi mục lịch sử
+                const entryContent = `
+                    <div class="entry-header">
+                        <span class="entry-time">${analysis.timestamp}</span>
+                        <span class="entry-pH">pH: ${analysis.pHValue}</span>
+                    </div>
+                    <div class="entry-body">
+                        <span class="entry-chemical">Chất hóa học phát hiện: ${analysis.detectedChemical}</span>
+                    </div>
+                `;
+        
+                // Đặt nội dung vào div
+                div.innerHTML = entryContent;
+        
+                // Thêm div vào danh sách lịch sử
+                historyList.appendChild(div);
+            });
+        }
+        // Gọi hàm displayAnalysisHistory khi trang được tải để hiển thị lịch sử hiện có
+        window.addEventListener('load', displayAnalysisHistory);
+        function processChemicalDetection(pHValue) {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const { r, g, b } = getBGR(canvas.width / 2, canvas.height / 2);
+            const detectedChemical = checkForChemicalSubstances(r, g, b, pHValue);
+            saveAnalysisToLocalStorage(pHValue, detectedChemical); // Update with detectedChemical
+            // Update UI based on detectedChemical
+            switch (detectedChemical) {
+                case "Cl2":
+                    detectedObjectElement.innerText = "Cl2 (Clo)";
+                    break;
+                case "CuSO4":
+                    if (pHValue >= 7.2 && pHValue <= 7.8) {
+                        detectedObjectElement.innerText = "CuSO4 (Đồng sulfat an toàn)";
+                        if (confirm("Bạn có muốn tìm hiểu về chất này không?")) {
+                            window.location.href = 'ungdungCuSO4.html';
+                        }
+                    } else {
+                        detectedObjectElement.innerText = "CuSO4 (Đồng sulfat có độc)";
+                    }
+                    break;
+                case "KMnO4":
+                    detectedObjectElement.innerText = "KMnO4 (Kali permanganat)";
+                    if (confirm("Bạn có muốn tìm hiểu về chất này không?")) {
+                        window.location.href = 'ungdungKMnO4.html';
+                    }
+                    break;
+                case "FeCl2":
+                    if(pHValue <= 6){
+                        detectedObjectElement.innerText = "FeCl2 (Sắt(II) clorua)";
+                        if (confirm("Bạn có muốn tìm hiểu về chất này không?")) {
+                            window.location.href = 'ungdungFeCl2.html';
+                        }
+                    }
+                    break;
+                case "H2O":
+                    detectedObjectElement.innerText = "H2O (Nước)";
+                    break;
+                default:
+                    detectedObjectElement.innerText = "Chưa phát hiện chất hóa học";
+                    break;
+            }
+        }
+    
+        function drawSquare(x, y) {
+            context.strokeStyle = 'rgb(0, 255, 255)';
+            context.lineWidth = 2;
+            context.strokeRect(x - 75, y - 75, 150, 150);
+        }
+    
+        function getBGR(x, y) {
+            const frame = context.getImageData(x, y, 1, 1).data;
+            return { r: frame[0], g: frame[1], b: frame[2] };
+        }
+    
+        function getColorName(r, g, b) {
+            if (r >= 180 && g >= 180 && b < 100) {
+                return "Vàng";
+            } else if (r >= 180 && g < 115 && b < 115) {
+                return "Đỏ";
+            } else if (g >= 200 && r < 200 && b < 200) {
+                return "Xanh lá";
+            } else if (r < 70 && g >= 80 && b >= 130) {
+                return "Xanh dương";
+            } else if (r <= 10 && g <= 10 && b <= 10) {
+                return "Đen";
+            } else if (r >= 160 && g >= 160 && b >= 160) {
+                return "Trắng";
+            } else if (r <= 220 && g <= 100 && b >= 200) {
+                return "Tím";
+            } else if (r >= 220 && g >= 150 && b <= 10) {
+                return "Cam";
+            } else if (r>=150 && g>= 150 && b >= 150){
+                return "Không màu";
+            }
+    
+            let minimum = Infinity;
+            let name = "Chưa xác định";
+    
+            for (const row of csvData) {
+                const d = Math.sqrt(
+                    Math.pow(r - parseInt(row.R), 2) +
+                    Math.pow(g - parseInt(row.G), 2) +
+                    Math.pow(b - parseInt(row.B), 2)
+                );
+                if (d < minimum) {
+                    minimum = d;
+                    name = row.color_name;
+                }
+            }
+            return name;
+        }
+    
+        function putText(x, y, r, g, b) {
+            const cname = getColorName(r, g, b);
+            const text = `${cname} | R=${r} G=${g} B=${b}`;
+            context.fillStyle = 'white';
+            context.font = "20px Arial";
+            context.fillText(text, x - 75, y - 90);
+        }
+    
+        function checkForChemicalSubstances(r, g, b, pH) {
+            if (pH >= 3 && pH <= 5 && r >= 180 && g >= 180 && b < 100) {
+                return "Cl2";
+            } else if (pH >= 7.2 && pH <= 7.8 && r < 100 && g >= 100 && b >= 180) {
+                return "CuSO4";
+            } else if ((pH <= 7.2 || pH > 7.8) && r < 100 && g >= 100 && b >= 180) {
+                // Hiển thị cảnh báo trên giao diện
+                return "CuSO4";
+            } else if ((pH >= 6 && pH <= 7) || pH <= 2 || pH >= 12 && r <= 220 && g <= 100 && b >= 200) {
+                return "KMnO4";
+            } else if (pH <= 6 && g >= 200 && r < 200 && b < 200) {
+                return "FeCl2";
+            } else if ((pH >= 6.50 && pH <= 8.50)&& r>=150 && g>= 150 && b >= 150){
+                return "H2O";
+            }
+            else {
+                return "Chưa phát hiện chất hóa học";
+            }
+        }
+    
+        function setupCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                    video.srcObject = stream;
+                    video.play();
+                    video.addEventListener('play', function () {
+                        (function loop() {
+                            if (!video.paused && !video.ended) {
+                                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                                const x = canvas.width / 2;
+                                const y = canvas.height / 2;
+                                const pixelColor = getBGR(x, y);
+                                drawSquare(x, y);
+                                putText(x, y, pixelColor.r, pixelColor.g, pixelColor.b);
+                                setTimeout(loop, 1000 / 30);
+                            }
+                        })();
+                    });
+                })
+                .catch(function (error) {
+                    console.error("Có lỗi xảy ra khi truy cập webcam:", error);
+                });
+        }
+    
+        // Event listener for reset button
+        document.getElementById('resetButton').addEventListener('click', () => {
+            phInputElement.value = "7.00";
+            detectedObjectElement.innerText = "Chưa xác định";
+        });
+    
+        window.addEventListener('load', () => {
+            setupCamera();
+            // Tải dữ liệu từ tệp CSV
+            Papa.parse("colors.csv", {
+                download: true,
+                header: true,
+                complete: function (results) {
+                    csvData = results.data;
+                }
+            });
+        });
+    
+        // Event listener for pH input change
+        phInputElement.addEventListener('change', () => {
+            const pHValue = readPHValue();
+            if (pHValue !== "Chưa xác định") {
+                processChemicalDetection(pHValue);
+            } else {
+                alert("Vui lòng nhập giá trị pH hợp lệ (0 đến 14).");
+            }
+        });
+    </script>
+    
+</body>
+</html>
